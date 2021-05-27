@@ -237,6 +237,7 @@ function install-gci-mounter-tools {
 }
 
 # Install node problem detector binary.
+# Assumptions: HOST_PLATFORM and HOST_ARCH are specified by calling detect_host_info.
 function install-node-problem-detector {
   if [[ -n "${NODE_PROBLEM_DETECTOR_VERSION:-}" ]]; then
       local -r npd_version="${NODE_PROBLEM_DETECTOR_VERSION}"
@@ -245,7 +246,7 @@ function install-node-problem-detector {
       local -r npd_version="${DEFAULT_NPD_VERSION}"
       local -r npd_hash="${DEFAULT_NPD_HASH}"
   fi
-  local -r npd_tar="node-problem-detector-${npd_version}.tar.gz"
+  local -r npd_tar="node-problem-detector-${npd_version}-${HOST_PLATFORM}_${HOST_ARCH}.tar.gz"
 
   if is-preloaded "${npd_tar}" "${npd_hash}"; then
     echo "${npd_tar} is preloaded."
