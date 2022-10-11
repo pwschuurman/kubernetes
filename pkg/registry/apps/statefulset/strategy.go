@@ -18,6 +18,7 @@ package statefulset
 
 import (
 	"context"
+	"strconv"
 
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -77,6 +78,20 @@ func (statefulSetStrategy) PrepareForCreate(ctx context.Context, obj runtime.Obj
 
 	dropStatefulSetDisabledFields(statefulSet, nil)
 	pod.DropDisabledTemplateFields(&statefulSet.Spec.Template, nil)
+
+	if statefulSet.Annotations == nil {
+		statefulSet.Annotations = make(map[string]string)
+	}
+	if statefulSet.Spec.Ordinals == nil {
+		statefulSet.Spec.Ordinals = &apps.StatefulSetOrdinals{}
+	}
+	if statefulSet.Annotations["statefulset.gke.io/replica-start-ordinal"] != "" {
+		replicaStartOrdinalStr := statefulSet.Annotations["statefulset.gke.io/replica-start-ordinal"]
+		replicaStartOrdinal, _ := strconv.ParseInt(replicaStartOrdinalStr, 10, 32)
+		statefulSet.Spec.Ordinals.Start = int32(replicaStartOrdinal)
+	}
+	statefulSet.Annotations["gke.io/gke-wm-replicas"] = strconv.Itoa(int(statefulSet.Spec.Replicas))
+	statefulSet.Annotations["gke.io/gke-wm-replica-start-ordinal"] = strconv.Itoa(int(statefulSet.Spec.Ordinals.Start))
 }
 
 // maxUnavailableInUse returns true if StatefulSet's maxUnavailable set(used)
@@ -107,6 +122,22 @@ func (statefulSetStrategy) PrepareForUpdate(ctx context.Context, obj, old runtim
 	if !apiequality.Semantic.DeepEqual(oldStatefulSet.Spec, newStatefulSet.Spec) {
 		newStatefulSet.Generation = oldStatefulSet.Generation + 1
 	}
+
+	if newStatefulSet.Annotations == nil {
+		newStatefulSet.Annotations = make(map[string]string)
+	}
+	if newStatefulSet.Spec.Ordinals == nil {
+		newStatefulSet.Spec.Ordinals = &apps.StatefulSetOrdinals{}
+	}
+	if newStatefulSet.Annotations["statefulset.gke.io/replica-start-ordinal"] != "" {
+		replicaStartOrdinalStr := newStatefulSet.Annotations["statefulset.gke.io/replica-start-ordinal"]
+		replicaStartOrdinal, _ := strconv.ParseInt(replicaStartOrdinalStr, 10, 32)
+		newStatefulSet.Spec.Ordinals.Start = int32(replicaStartOrdinal)
+	} else {
+		newStatefulSet.Spec.Ordinals.Start = 0
+	}
+	newStatefulSet.Annotations["gke.io/gke-wm-replicas"] = strconv.Itoa(int(newStatefulSet.Spec.Replicas))
+	newStatefulSet.Annotations["gke.io/gke-wm-replica-start-ordinal"] = strconv.Itoa(int(newStatefulSet.Spec.Ordinals.Start))
 }
 
 // dropStatefulSetDisabledFields drops fields that are not used if their associated feature gates
